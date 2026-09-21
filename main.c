@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 #ifdef _WIN32
     #define LIMPAR_TELA() system("cls")
@@ -7,16 +9,31 @@
     #define LIMPAR_TELA() system("clear")
 #endif
 
+unsigned long hash(const char *str) {
+    unsigned long h = 5381;
+    int c;
+    while ((c = *str++)) {
+        h = ((h << 5) + h) + c; // h * 33 + c
+    }
+    return h;
+}
+
+typedef struct {
+    int identificador;
+    int tamanho;
+    char nome[50];
+}arquivo;
+
 typedef struct Node {
-    int valor;
+    arquivo* valor;
     int altura;
     struct Node* esquerda;
     struct Node* direita;
 } Nodo;
 
-Nodo* criarNo(int valor) {
+Nodo* criarNo(arquivo* arc) {
     Nodo* novoNo = (Nodo*)malloc(sizeof(Nodo));
-    novoNo->valor = valor;
+    novoNo->valor = arc;
     novoNo->altura = 1;
     novoNo->esquerda = novoNo->direita = NULL;
     return novoNo;
@@ -66,37 +83,37 @@ Nodo* rotacaoEsquerda(Nodo* x) {
     return y;
 }
 
-Nodo* inserirAVL(Nodo* raiz, int valor) {
+Nodo* inserirAVL(Nodo* raiz, arquivo* arc) {
     if (raiz == NULL) {
-        return criarNo(valor);
+        return criarNo(arc);
     }
 
-    if (valor < raiz->valor) {
-        raiz->esquerda = inserirAVL(raiz->esquerda, valor);
-    } else if (valor > raiz->valor) {
-        raiz->direita = inserirAVL(raiz->direita, valor);
+    if (arc->identificador < raiz->valor->identificador) {
+        raiz->esquerda = inserirAVL(raiz->esquerda, arc);
+    } else if (arc->identificador > raiz->valor->identificador) {
+        raiz->direita = inserirAVL(raiz->direita, arc);
     } else {
-        return raiz;
+        return NULL;
     }
 
     atualizarAltura(raiz);
 
     int fb = fatorBalanceamento(raiz);
 
-    if (fb > 1 && valor < raiz->esquerda->valor) {
+    if (fb > 1 && arc->identificador < raiz->esquerda->valor->identificador) {
         return rotacaoDireita(raiz);
     }
 
-    if (fb < -1 && valor > raiz->direita->valor) {
+    if (fb < -1 && arc->identificador > raiz->direita->valor->identificador) {
         return rotacaoEsquerda(raiz);
     }
 
-    if (fb > 1 && valor > raiz->esquerda->valor) {
+    if (fb > 1 && arc->identificador > raiz->esquerda->valor->identificador) {
         raiz->esquerda = rotacaoEsquerda(raiz->esquerda);
         return rotacaoDireita(raiz);
     }
 
-    if (fb < -1 && valor < raiz->direita->valor) {
+    if (fb < -1 && arc->identificador < raiz->direita->valor->identificador) {
         raiz->direita = rotacaoDireita(raiz->direita);
         return rotacaoEsquerda(raiz);
     }
@@ -111,13 +128,13 @@ Nodo* encontrarMinimo(Nodo* no) {
     return atual;
 }
 
-Nodo* removerAVL(Nodo* raiz, int valor) {
+Nodo* removerAVL(Nodo* raiz, int identificador) {
     if (raiz == NULL) return raiz;
 
-    if (valor < raiz->valor) {
-        raiz->esquerda = removerAVL(raiz->esquerda, valor);
-    } else if (valor > raiz->valor) {
-        raiz->direita = removerAVL(raiz->direita, valor);
+    if (identificador < raiz->valor->identificador) {
+        raiz->esquerda = removerAVL(raiz->esquerda, identificador);
+    } else if (identificador > raiz->valor->identificador) {
+        raiz->direita = removerAVL(raiz->direita, identificador);
     } else {
         if (raiz->esquerda == NULL || raiz->direita == NULL) {
             Nodo* filho = (raiz->esquerda) ? raiz->esquerda : raiz->direita;
@@ -126,7 +143,7 @@ Nodo* removerAVL(Nodo* raiz, int valor) {
         } else {
             Nodo* sucessor = encontrarMinimo(raiz->direita);
             raiz->valor = sucessor->valor;
-            raiz->direita = removerAVL(raiz->direita, sucessor->valor);
+            raiz->direita = removerAVL(raiz->direita, sucessor->valor->identificador);
         }
     }
 
@@ -155,12 +172,12 @@ Nodo* removerAVL(Nodo* raiz, int valor) {
     return raiz;
 }
 
-Nodo* buscar(Nodo* raiz, int valor) {
+Nodo* buscar(Nodo* raiz, int identificador) {
     Nodo* atual = raiz;
     while (atual != NULL) {
-        if (valor == atual->valor) {
+        if (identificador == atual->valor->identificador) {
             return atual;
-        } else if (valor < atual->valor) {
+        } else if (identificador < atual->valor->identificador) {
             atual = atual->esquerda;
         } else {
             atual = atual->direita;
@@ -173,6 +190,7 @@ void liberarArvore(Nodo* raiz) {
     if (raiz == NULL) return;
     liberarArvore(raiz->esquerda);
     liberarArvore(raiz->direita);
+    free(raiz->valor);
     free(raiz);
 }
 
@@ -189,7 +207,7 @@ void desenharArvore(Nodo* raiz, int espaco, char prefixo) {
     } else {
         printf("--- ");
     }
-    printf("%d\n", raiz->valor);
+    printf("%s: %d\n", raiz->valor->nome, raiz->valor->identificador);
 
     desenharArvore(raiz->esquerda, novoEspaco, '\\');
 }
@@ -207,28 +225,30 @@ void exibirArvore(Nodo* raiz) {
 void emOrdem(Nodo* raiz) {
     if (raiz == NULL) return;
     emOrdem(raiz->esquerda);
-    printf("%d ", raiz->valor);
+    printf("%s: %d ", raiz->valor->nome, raiz->valor->identificador);
     emOrdem(raiz->direita);
 }
 
 void pausar() {
     printf("\nPressione Enter para continuar...");
-    while (getchar() != '\n');
-    getchar();
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF); // limpa o buffer
+    getchar(); // agora espera o Enter de verdade
 }
+
 
 void exibirMenu() {
     printf("========================================\n");
     printf("   Logitechi Gerenciamento de arquivos\n");
     printf("========================================\n");
-    printf("1. Inserir valor\n");
-    printf("2. Remover valor\n");
-    printf("3. Buscar valor\n");
-    printf("4. Exibir árvore (desenho)\n");
-    printf("5. Exibir árvore em ordem\n");
+    printf("1. Inserir arquivo\n");
+    printf("2. Remover arquivo\n");
+    printf("3. Buscar arquivo\n");
+    printf("4. Exibir arvore (desenho)\n");
+    printf("5. Exibir arvore em ordem\n");
     printf("0. Sair\n");
     printf("========================================\n");
-    printf("Escolha uma opção: ");
+    printf("Escolha uma opcao: ");
 }
 
 int lerInteiro() {
@@ -240,10 +260,51 @@ int lerInteiro() {
     return valor;
 }
 
+arquivo* lerArquivo(arquivo* arc) {
+    //Variaveis
+    char buffer[100]; // buffer para armazenar a string da data
+    time_t agora;
+    struct tm *infoTempo;
+    int dataInt;
+    char *extensao;
+
+    //Nome e extensão do arquivo
+    int correto = 0;
+    while (!correto) {
+        printf("Digite o nome do arquivo (PDF ou DOCX): ");
+        scanf("%s", arc->nome);
+
+        extensao = strrchr(arc->nome, '.');
+        if (extensao != NULL) {
+            extensao++;
+
+            if (strcmp(extensao, "pdf") == 0) {
+                arc->tamanho = 40 + rand() % (4000 - 40 + 1);
+                correto = 1;
+            } else if (strcmp(extensao, "docx") == 0) {
+                arc->tamanho = 20 + rand() % (2000 - 20 + 1);
+                correto = 1;
+            } else {
+                printf("Os arquivos precisam ser PDF ou DOCX! (Ex: 'nome_arquivo.pdf').\n");
+            }
+        } else {
+            printf("Digite tambem a extensao do arquivo! (Ex: 'nome_arquivo.pdf').\n");
+        }
+
+    }
+
+    //Indentificador
+    arc->identificador = (int)hash(arc->nome);
+
+    return arc;
+}
+
 int main() {
     Nodo* raiz = NULL;
-    int opcao, valor;
     Nodo* encontrado;
+    int opcao, valor, identificador;
+    char excluir[50];
+    srand(time(NULL));
 
     do {
         LIMPAR_TELA();
@@ -252,45 +313,51 @@ int main() {
 
         switch (opcao) {
             case 1:
-                printf("Digite o valor a inserir: ");
-                valor = lerInteiro();
-                raiz = inserirAVL(raiz, valor);
+                arquivo* arc = (arquivo*)malloc(sizeof(arquivo));
+                arc = lerArquivo(arc);
+                Nodo* novo = inserirAVL(raiz, arc);
                 LIMPAR_TELA();
-                printf("Valor %d inserido com sucesso!\n", valor);
+                if (novo != NULL) {
+                    raiz = novo;
+                    printf("Arquivo inserido com sucesso!\n");
+                } else {
+                    printf("Arquivo ja existe!\n");
+                }
                 exibirArvore(raiz);
                 pausar();
                 break;
 
             case 2:
-                printf("Digite o valor a remover: ");
-                valor = lerInteiro();
+                printf("Digite o nome do arquivo a remover: ");
+                scanf("%s", &excluir);
+                identificador = (int)hash(excluir);
                 LIMPAR_TELA();
-                if (buscar(raiz, valor) == NULL) {
-                    printf("Valor %d não encontrado na árvore.\n", valor);
+                if (buscar(raiz, identificador) == NULL) {
+                    printf("Identificador %d não encontrado na árvore.\n", identificador);
                 } else {
-                    raiz = removerAVL(raiz, valor);
-                    printf("Valor %d removido com sucesso!\n", valor);
+                    raiz = removerAVL(raiz, identificador);
+                    printf("Identificador %d removido com sucesso!\n", identificador);
                     exibirArvore(raiz);
                 }
                 pausar();
                 break;
 
             case 3:
-                printf("Digite o valor a buscar: ");
-                valor = lerInteiro();
+                printf("Digite o identificador do arquivo a buscar: ");
+                identificador = lerInteiro();
                 LIMPAR_TELA();
-                encontrado = buscar(raiz, valor);
+                encontrado = buscar(raiz, identificador);
                 if (encontrado != NULL) {
-                    printf("Valor %d está presente na árvore!\n", valor);
+                    printf("Identificador %d está presente na árvore!\n", identificador);
                 } else {
-                    printf("Valor %d não está presente na árvore.\n", valor);
+                    printf("Identificador %d não está presente na árvore.\n", identificador);
                 }
                 pausar();
                 break;
 
             case 4:
                 LIMPAR_TELA();
-                printf("Estrutura atual da árvore:\nPS: Tá lindona! :D\n");
+                printf("Estrutura atual da árvore:\n");
                 exibirArvore(raiz);
                 pausar();
                 break;
