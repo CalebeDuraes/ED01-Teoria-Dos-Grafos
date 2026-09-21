@@ -13,7 +13,7 @@ unsigned long hash(const char *str) {
     unsigned long h = 5381;
     int c;
     while ((c = *str++)) {
-        h = ((h << 5) + h) + c; // h * 33 + c
+        h = ((h << 5) + h) + c;
     }
     return h;
 }
@@ -225,15 +225,15 @@ void exibirArvore(Nodo* raiz) {
 void emOrdem(Nodo* raiz) {
     if (raiz == NULL) return;
     emOrdem(raiz->esquerda);
-    printf("%s ", raiz->valor->nome);
+    printf("%s (ID: %d)\n", raiz->valor->nome, raiz->valor->identificador);
     emOrdem(raiz->direita);
 }
 
 void pausar() {
     printf("\nPressione Enter para continuar...");
     int c;
-    while ((c = getchar()) != '\n' && c != EOF); // limpa o buffer
-    getchar(); // agora espera o Enter de verdade
+    while ((c = getchar()) != '\n' && c != EOF);
+    getchar();
 }
 
 
@@ -261,14 +261,8 @@ int lerInteiro() {
 }
 
 arquivo* lerArquivo(arquivo* arc) {
-    //Variaveis
-    char buffer[100]; // buffer para armazenar a string da data
-    time_t agora;
-    struct tm *infoTempo;
-    int dataInt;
     char *extensao;
 
-    //Nome e extensão do arquivo
     int correto = 0;
     while (!correto) {
         printf("Digite o nome do arquivo (PDF ou DOCX): ");
@@ -293,7 +287,6 @@ arquivo* lerArquivo(arquivo* arc) {
 
     }
 
-    //Indentificador
     arc->identificador = (int)hash(arc->nome);
 
     return arc;
@@ -302,8 +295,9 @@ arquivo* lerArquivo(arquivo* arc) {
 int main() {
     Nodo* raiz = NULL;
     Nodo* encontrado;
-    int opcao, valor, identificador;
+    int opcao, identificador;
     char excluir[50];
+    char busca[50];
     srand(time(NULL));
 
     do {
@@ -319,7 +313,7 @@ int main() {
                 LIMPAR_TELA();
                 if (novo != NULL) {
                     raiz = novo;
-                    printf("Arquivo inserido com sucesso!\n");
+                    printf("%s inserido com sucesso! (ID: %d | Tamanho: %dKB)\n", arc->nome, arc->identificador, arc->tamanho);
                 } else {
                     printf("Arquivo ja existe!\n");
                 }
@@ -328,12 +322,15 @@ int main() {
                 break;
 
             case 2:
+                LIMPAR_TELA();
+                printf("Estrutura atual da arvore:\n");
+                exibirArvore(raiz);
                 printf("Digite o nome do arquivo a remover: ");
-                scanf("%s", &excluir);
+                scanf("%s", excluir);
                 identificador = (int)hash(excluir);
                 LIMPAR_TELA();
                 if (buscar(raiz, identificador) == NULL) {
-                    printf("Identificador %d não encontrado na árvore.\n", identificador);
+                    printf("Identificador %d nao encontrado na arvore.\n", identificador);
                 } else {
                     raiz = removerAVL(raiz, identificador);
                     printf("Identificador %d removido com sucesso!\n", identificador);
@@ -343,28 +340,29 @@ int main() {
                 break;
 
             case 3:
-                printf("Digite o identificador do arquivo a buscar: ");
-                identificador = lerInteiro();
+                printf("Digite o nome do arquivo a buscar: ");
+                scanf("%s", busca);
+                identificador = (int)hash(busca);
                 LIMPAR_TELA();
                 encontrado = buscar(raiz, identificador);
                 if (encontrado != NULL) {
-                    printf("Identificador %d está presente na árvore!\n", identificador);
+                    printf("Arquivo \"%s\" está presente na arvore! (ID: %d | Tamanho: %dKB)\n", busca, identificador, encontrado->valor->tamanho);
                 } else {
-                    printf("Identificador %d não está presente na árvore.\n", identificador);
+                    printf("Arquivo \"%s\" não está presente na arvore.\n", busca);
                 }
                 pausar();
                 break;
 
             case 4:
                 LIMPAR_TELA();
-                printf("Estrutura atual da árvore:\n");
+                printf("Estrutura atual da arvore:\n");
                 exibirArvore(raiz);
                 pausar();
                 break;
 
             case 5:
                 LIMPAR_TELA();
-                printf("Caminho em ordem crescente: ");
+                printf("Caminho em ordem crescente:\n");
                 emOrdem(raiz);
                 printf("\n\n");
                 pausar();
@@ -376,7 +374,7 @@ int main() {
                 break;
 
             default:
-                printf("Opção inválida!\n");
+                printf("Opção invalida!\n");
                 pausar();
         }
 
