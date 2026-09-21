@@ -207,7 +207,7 @@ void desenharArvore(Nodo* raiz, int espaco, char prefixo) {
     } else {
         printf("--- ");
     }
-    printf("%s: %d\n", raiz->valor->nome, raiz->valor->identificador);
+    printf("%s\n", raiz->valor->nome);
 
     desenharArvore(raiz->esquerda, novoEspaco, '\\');
 }
@@ -225,7 +225,7 @@ void exibirArvore(Nodo* raiz) {
 void emOrdem(Nodo* raiz) {
     if (raiz == NULL) return;
     emOrdem(raiz->esquerda);
-    printf("%s: %d ", raiz->valor->nome, raiz->valor->identificador);
+    printf("%s ", raiz->valor->nome);
     emOrdem(raiz->direita);
 }
 
